@@ -1,0 +1,45 @@
+---
+- name: Push Docker image to AWS ECR
+  hosts: localhost
+  vars:
+    aws_region: "us-east-1"
+    ecr_repository: "-----"
+    image_name: "my-app"
+    image_tag: "latest"
+    account_id: "---"
+  tasks:
+    - name: Log in to AWS ECR
+      shell: |
+        aws ecr get-login-password --region {{ aws_region }} | docker login --username AWS --password-stdin {{ account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com
+      register: login_result
+
+    - name: Debug login result
+      debug:
+        var: login_result
+
+    - name: Build the Docker image
+      become: yes
+      command: docker build -t {{ image_name }} .
+      register: build_result
+
+    - name: Debug build result
+      debug:
+        var: build_result
+
+    - name: Tag the Docker image
+      become: yes
+      command: docker tag {{ image_name }}:{{ image_tag }} {{ account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com/{{ ecr_repository }}:{{ image_tag }}
+      register: tag_result
+
+    - name: Debug tag result
+      debug:
+        var: tag_result
+
+    - name: Push the Docker image to ECR
+      become: yes
+      command: docker push {{ account_id }}.dkr.ecr.{{ aws_region }}.amazonaws.com/{{ ecr_repository }}:{{ image_tag }}
+      register: push_result
+
+    - name: Debug push result
+      debug:
+        var: push_result
